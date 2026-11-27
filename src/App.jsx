@@ -1,56 +1,130 @@
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 export default function App() {
-  const [links, setLinks] = useState([]);
-  const [url, setUrl] = useState("");
-
-  function addLink() {
-    const link = url.trim();
-    if (!link) return;
-
-    if (!/^https:\/\/(www\.)?facebook\.com\/ads\/library\/\?id=\d+/.test(link)) {
-      alert("دخل رابط صحيح من Facebook Ads Library");
-      return;
+  const [links, setLinks] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("adscroll-links") || "[]");
+    } catch {
+      return [];
     }
+  });
 
-    setLinks([...links, link]);
-    setUrl("");
+  const [input, setInput] = useState("");
+
+  useEffect(() => {
+    localStorage.setItem("adscroll-links", JSON.stringify(links));
+  }, [links]);
+
+  function addLinks() {
+    const newLinks = input
+      .split(/\s+/)
+      .map(x => x.trim())
+      .filter(Boolean);
+
+    const valid = newLinks.filter(link => {
+      try {
+        const u = new URL(link);
+        const facebookAd =
+          ["facebook.com", "www.facebook.com"].includes(u.hostname) &&
+          u.pathname === "/ads/library/" &&
+          /^\d+$/.test(u.searchParams.get("id") || "");
+
+        const directVideo =
+          ["http:", "https:"].includes(u.protocol) &&
+          /\.(mp4|webm)(\?.*)?$/i.test(link);
+
+        return facebookAd || directVideo;
+      } catch {
+        return false;
+      }
+    });
+
+    setLinks(old => [...new Set([...old, ...valid])]);
+    setInput("");
+
+    if (!valid.length) {
+      alert("ما لقينا حتى رابط صالح. تحقق من الروابط.");
+    } else {
+      alert(`تمت إضافة ${valid.length} روابط`);
+    }
+  }
+
+  function removeLink(index) {
+    setLinks(old => old.filter((_, i) => i !== index));
   }
 
   return (
     <main className="app">
-      <header>
+      <header className="top">
         <h1>AdScroll</h1>
-        <p>Your Facebook Ads Library Feed</p>
+        <p>Discover ads. Swipe. Repeat.</p>
       </header>
 
       <section className="add">
-        <input
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="Paste Facebook ad link..."
+        <textarea
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          placeholder={"ألصق روابط الإعلانات هنا...\nكل رابط في سطر"}
+          rows="3"
         />
-        <button onClick={addLink}>+ Add Ad</button>
+        <button onClick={addLinks}>+ Add Ads</button>
+        <p>{links.length} advertisements saved</p>
       </section>
 
       <section className="feed">
         {links.length === 0 ? (
-          <h2>Add your first Facebook ad 🚀</h2>
+          <div className="empty">
+            <h2>Welcome to AdScroll 🚀</h2>
+            <p>أضف روابط الإعلانات وابدأ التصفح</p>
+          </div>
         ) : (
-          links.map((link, index) => (
-            <article className="ad" key={index}>
-              <h3>Advertisement {index + 1}</h3>
-              <a href={link} target="_blank" rel="noreferrer">
-                Open original ad ↗
-              </a>
-              <iframe
-                title={`Ad ${index + 1}`}
-                src={link}
-                loading="lazy"
-              />
-            </article>
-          ))
+          links.map((link, index) => {
+            const isVideo = /\.(mp4|webm)(\?.*)?$/i.test(link);
+
+            return (
+              <article className="ad" key={link}>
+                <div className="ad-content">
+                  <span className="number">
+                    AD {index + 1} / {links.length}
+                  </span>
+
+                  {isVideo ? (
+                    <video
+                      src={link}
+                      controls
+                      playsInline
+                      preload="metadata"
+                    />
+                  ) : (
+                    <div className="facebook-placeholder">
+                      <div className="play">▶</div>
+                      <h2>Facebook Advertisement</h2>
+                      <p>
+                        افتح الإعلان الأصلي لمشاهدة الفيديو
+                      </p>
+                    </div>
+                  )}
+
+                  <a
+                    className="open"
+                    href={link}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open Original Ad ↗
+                  </a>
+
+                  <button
+                    className="delete"
+                    onClick={() => removeLink(index)}
+                  >
+                    Delete Ad
+                  </button>
+                </div>
+              </article>
+            );
+          })
         )}
       </section>
     </main>
