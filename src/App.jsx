@@ -98,7 +98,6 @@ export default function App() {
   muted
   autoPlay
   preload="auto"
-  crossOrigin="anonymous"
   onError={(e) => {
     console.log("Video error:", e.currentTarget.error);
   }}
