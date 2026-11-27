@@ -90,12 +90,19 @@ export default function App() {
                   </span>
 
                   {isVideo ? (
-                    <video
-                      src={link}
-                      controls
-                      playsInline
-                      preload="metadata"
-                    />
+<video
+  key={link}
+  src={link}
+  controls
+  playsInline
+  muted
+  autoPlay
+  preload="auto"
+  crossOrigin="anonymous"
+  onError={(e) => {
+    console.log("Video error:", e.currentTarget.error);
+  }}
+/>
                   ) : (
                     <div className="facebook-placeholder">
                       <div className="play">▶</div>
